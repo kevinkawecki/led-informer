@@ -3,12 +3,14 @@ import time
 import sys
 import os
 
-from helper import from_minutes
+from helper import from_minutes, get_hour, get_minutes, get_month_day_dow
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)
                                + '/../rpi-rgb-led-matrix/bindings/python/'))
 from rgbmatrix import graphics, RGBMatrix, RGBMatrixOptions
 
+
+# GLOBALS for this class 
 RED = graphics.Color(255, 0, 0)
 PURP = graphics.Color(100, 0, 255)
 YELLOW = graphics.Color(155, 255, 100)
@@ -17,6 +19,8 @@ WHITE = graphics.Color(155, 155, 155)
 
 CLK1 = graphics.Color(200, 220, 215)
 CLK2 = graphics.Color(210, 200, 255)
+
+TIME_CALENDAR = 20
 
 class DisplayDriver:
     def __init__(self): 
@@ -27,7 +31,7 @@ class DisplayDriver:
         self.options.chain_length = 1
         self.options.parallel = 1
         self.options.hardware_mapping = 'adafruit-hat'
-        self.options.brightness = 40
+        self.options.brightness = 50
 
         self.matrix = RGBMatrix(options = self.options)
         self.canvas = self.matrix.CreateFrameCanvas()
@@ -35,8 +39,10 @@ class DisplayDriver:
         self.bigfont.LoadFont(os.path.dirname(__file__) + "/../rpi-rgb-led-matrix/fonts/5x8.bdf")
         self.smallfont = graphics.Font()
         self.smallfont.LoadFont("../rpi-rgb-led-matrix/fonts/4x6.bdf")
-        self.biggerfont = graphics.Font()
-        self.biggerfont.LoadFont("../rpi-rgb-led-matrix/fonts/9x18B.bdf")
+        self.monthfont = graphics.Font()
+        self.monthfont.LoadFont("../rpi-rgb-led-matrix/fonts/7x13B.bdf")
+        self.timefont = graphics.Font()
+        self.timefont.LoadFont("../rpi-rgb-led-matrix/fonts/9x18B.bdf")
 
         self.N_times = []
         self.S_times = []
@@ -46,20 +52,28 @@ class DisplayDriver:
 
         self.hcount = 0
         self.mcount = 30
+        self.count = 0
+
+        self.showClock = True
+        self.showTick = True
 
 
     def loop(self):
         try:
             self.canvas.Clear()
 
-            self.displayClock()
+            if self.showClock: 
+                self.displayClock()
+            else: 
+                self.displayCal()
             #self.printLines()
             if len(self.N_times) == 0 and len(self.S_times) == 0: 
                 #print("no times to show")
                 self.theLisDown()
             else:
                 self.displayTimes()
-            #self.tick()
+
+            self.tick()
 
             self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
@@ -75,35 +89,25 @@ class DisplayDriver:
         graphics.DrawText(self.canvas, self.bigfont, 30, 28, 
                           RED, "DOWN!")
 
+    def displayCal(self):
+        print("TEST")
+        month, day, dow = get_month_day_dow()
+        graphics.DrawText(self.canvas, self.monthfont, 2, 10, 
+                          self.hcolor, dow)
+        graphics.DrawText(self.canvas, self.monthfont, 2, 20, 
+                          self.hcolor, month)
+        graphics.DrawText(self.canvas, self.monthfont, 9, 30, 
+                          self.hcolor, day)
+
     def displayClock(self):
-        hour = time.localtime().tm_hour
-        if hour > 12: 
-            hour -= 12
-        elif hour == 0: 
-            hour = 12
+        hour = get_hour()
+        minutes = get_minutes()
 
-        minutes = time.localtime().tm_min
-        clockstring = f"{hour}:{minutes:02d}"
-        hrstring = f"{hour:02d}"
+        graphics.DrawText(self.canvas, self.timefont, 3, 14, 
+                          self.hcolor, hour)
+        graphics.DrawText(self.canvas, self.timefont, 3, 27, 
+                          self.mcolor, minutes)
 
-        mnstring = f"{minutes:02d}"
-        if False:
-            hrstring = f"{self.hcount:02d}"
-            if self.hcount == 12:
-                self.hcount = 0
-            else:
-                self.hcount += 1
-            mnstring = f"{self.mcount:02d}"
-            if self.mcount == 59:
-                self.mcount = 0
-            else:
-                self.mcount += 1
-
-
-        graphics.DrawText(self.canvas, self.biggerfont, 3, 14, 
-                          self.hcolor, hrstring)
-        graphics.DrawText(self.canvas, self.biggerfont, 3, 27, 
-                          self.mcolor, mnstring)
     def tick(self):
         if self.hcolor == CLK1:
             self.hcolor = CLK2
@@ -114,6 +118,20 @@ class DisplayDriver:
             self.mcolor = CLK2
         else:
             self.mcolor = CLK1
+
+        self.hcolor = CLK1
+        self.mcolor = CLK1
+
+        if self.count % TIME_CALENDAR == 0: 
+            self.showClock = not self.showClock
+            self.count = 0
+
+        if self.showTick: 
+            graphics.DrawText(self.canvas, self.bigfont, -2, 32, 
+                          PURP, ".")
+        self.showTick = not self.showTick
+
+        self.count += 1
 
     def setNTimes(self, N_times):
         self.N_times = N_times
@@ -131,7 +149,7 @@ class DisplayDriver:
             self.printTimeCol(self.N_times, 1)
 
         # generate southbound col
-        graphics.DrawText(self.canvas, self.bigfont, 45, 8, YELLOW, "Can")
+        graphics.DrawText(self.canvas, self.bigfont, 45, 8, YELLOW, "Bkn")
         if len(self.S_times) == 0:
             graphics.DrawText(self.canvas, self.smallfont, 45, 16, 
                               YELLOW, "DOWN!")
@@ -154,18 +172,18 @@ class DisplayDriver:
         if col == 2: 
             printcol -= 1
 
-        printrow = 8
+        printrow = 9
         nstring = ''
         firstTime = True
         for t in times: 
-            printrow += 8
+            printrow += 7
             nextmin, nextsec = from_minutes(t)
             if firstTime: 
                 firstTime = False
                 if nextmin == 0: 
-                    nstring = f".{nextsec:02d}"
+                    nstring = f":{nextsec:02d}"
                 elif nextmin <= 5:
-                    nstring = f"{nextmin}.{nextsec:02d}"
+                    nstring = f"{nextmin}:{nextsec:02d}"
                 else: 
                     nstring = f"{nextmin}"
             else: 
