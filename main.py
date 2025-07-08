@@ -9,9 +9,7 @@ from weather import Weather
 
 # globals for when to reach out to servers and get updates
 MTA_UPDATE_SEC = 10
-WEATHER_UPDATE_SEC = 1800 # 30 min  
-mta_count = 0
-weather_count = 0
+WEATHER_UPDATE_SEC = 900 # 15 min  
 
 display = DisplayDriver()
 
@@ -27,25 +25,25 @@ cur_temp, daily_info = weather.getUpdate()
 display.setCurTemp(cur_temp)
 display.setDailyData(daily_info)
 
+# TODO update to time based rather than sleep based
+# - still have it only loop every second but change update rates to last set time 
+# - with time base we can make animations asynchronous 
 try: 
 	while True:
-		if mta_count >= MTA_UPDATE_SEC:
+		cur_time = time.time()
+		if cur_time - morganStop.getLastTime() >= MTA_UPDATE_SEC:
 			N_times, S_times = morganStop.getNextTimes()
 			display.setNTimes(N_times)
 			display.setSTimes(S_times)
-			mta_count = 0
 
-		if weather_count >= WEATHER_UPDATE_SEC:
+		if cur_time - weather.getLastTime() >= WEATHER_UPDATE_SEC:
 			cur_temp, daily_info = weather.getUpdate()
 			display.setCurTemp(cur_temp)
 			display.setDailyData(daily_info)
-			weather_count = 0
 
 		display.loop()
 
 		time.sleep(1)
-		mta_count += 1
-		weather_count += 1
 
 except KeyboardInterrupt:
 	sys.exit(0)

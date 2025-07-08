@@ -1,3 +1,4 @@
+import time
 import openmeteo_requests
 
 import pandas as pd
@@ -21,7 +22,7 @@ class Weather:
 			"longitude": -73.930478,
 			"daily": ["weather_code", "precipitation_probability_max", "apparent_temperature_max", "apparent_temperature_min", "precipitation_hours"],
 			"hourly": ["precipitation_probability", "apparent_temperature"],
-			"current": ["apparent_temperature", "weather_code"],
+			"current": ["apparent_temperature", "weather_code", "temperature_2m"],
 			"timezone": "America/New_York",
 			"forecast_days": 3,
 			"wind_speed_unit": "mph",
@@ -31,9 +32,14 @@ class Weather:
 
 		self.cur_temp = 0.
 		self.daily_info = []
+		self.lastTime = time.time()
+
+	def getLastTime(self):
+		return self.lastTime
 
 	def getNextWeather(self):
 		responses = self.openmeteo.weather_api(self.url, params=self.params)
+		self.lastTime = time.time()
 
 		# Process first location. Add a for-loop for multiple locations or weather models
 		response = responses[0]
@@ -44,12 +50,13 @@ class Weather:
 
 		# Current values. The order of variables needs to be the same as requested.
 		current = response.Current()
-		current_apparent_temperature = current.Variables(0).Value()
+		#current_apparent_temperature = current.Variables(0).Value()
+		current_temperature = current.Variables(2).Value()
 		#current_weather_code = current.Variables(1).Value()
-		self.cur_temp = current_apparent_temperature
+		self.cur_temp = current_temperature
 
-		print(f"Current time {current.Time()}")
-		print(f"Current apparent_temperature {current_apparent_temperature}")
+		#print(f"Current time {current.Time()}")
+		#print(f"Current apparent_temperature {current_apparent_temperature}")
 		#print(f"Current weather_code {current_weather_code}")
 
 		# Process hourly data. The order of variables needs to be the same as requested.
