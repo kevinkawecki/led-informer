@@ -29,10 +29,8 @@ class Weather:
 			"precipitation_unit": "inch"
 		}
 
-		self.cur_temp = 0
+		self.cur_temp = 0.
 		self.daily_info = []
-
-		self.getNextWeather()
 
 	def getNextWeather(self):
 		responses = self.openmeteo.weather_api(self.url, params=self.params)
@@ -50,8 +48,8 @@ class Weather:
 		#current_weather_code = current.Variables(1).Value()
 		self.cur_temp = current_apparent_temperature
 
-		#print(f"Current time {current.Time()}")
-		#print(f"Current apparent_temperature {current_apparent_temperature}")
+		print(f"Current time {current.Time()}")
+		print(f"Current apparent_temperature {current_apparent_temperature}")
 		#print(f"Current weather_code {current_weather_code}")
 
 		# Process hourly data. The order of variables needs to be the same as requested.
@@ -93,5 +91,17 @@ class Weather:
 		daily_data["apparent_temperature_min"] = daily_apparent_temperature_min
 		daily_data["precipitation_hours"] = daily_precipitation_hours
 
+		self.daily_info = daily_data
+
 		daily_dataframe = pd.DataFrame(data = daily_data)
 		print(daily_dataframe)
+
+	def getDaily(self):
+		return self.daily_info
+
+	def getCurTemp(self):
+		return self.cur_temp
+
+	def getUpdate(self):
+		self.getNextWeather()
+		return self.cur_temp, self.daily_info
