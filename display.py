@@ -160,19 +160,34 @@ class DisplayDriver:
 
 
 	def displayCurrentTemp(self, y_offset):
+		if self.curTemp <= 0:
+			# make everything this cold full blue / handle negatives 
+			tempcolor = graphics.Color(0, 0, 255)
+		elif self.curTemp > 100:
+			# make everything this hot full red / handle > 100 
+			tempcolor = graphics.Color(255, 0, 0)
+		else:
+			tempcolor = graphics.Color(255 * (self.curTemp/100), 255 - 255 * (self.curTemp/200), 255 - 255 * (self.curTemp/100))
+
 		graphics.DrawText(self.canvas, self.bigfont, 22, 30 + y_offset, 
-						  CLK1, "Temp") 
+						  tempcolor, "Temp") 
 		graphics.DrawText(self.canvas, self.bigfont, 45, 30 + y_offset, 
-						  CLK1, f"{self.curTemp:.0f}")
+						  tempcolor, f"{self.curTemp:.0f}")
 		# TODO make a degree symbol 
 
 	def displayCurrentRain(self, y_offset):
 		if self.dailyData["precipitation_probability_max"][0]:
 			rain_prob = self.dailyData["precipitation_probability_max"][0]
+			# make everything this low full white
+			if rain_prob <= 5:
+				raincolor = CLK1
+			else:
+				raincolor = graphics.Color(255 - 255 * (rain_prob/100), 255 - 255 * (rain_prob/100), 255)
+
 			graphics.DrawText(self.canvas, self.bigfont, 24, 8 + y_offset, 
-							CLK2, "Rain") 
-			graphics.DrawText(self.canvas, self.bigfont, 44, 8 + y_offset, 
-							CLK2, f"{rain_prob:.0f}%")
+							raincolor, "Rain") 
+			graphics.DrawText(self.canvas, self.bigfont, 45, 8 + y_offset, 
+							raincolor, f"{rain_prob:.0f}%")
 
 	def theLisDown(self, y_offset):
 		graphics.DrawText(self.canvas, self.bigfont, 30, 12 + y_offset, 
