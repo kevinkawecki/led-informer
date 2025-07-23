@@ -25,9 +25,6 @@ cur_temp, daily_info = weather.getUpdate()
 display.setCurTemp(cur_temp)
 display.setDailyData(daily_info)
 
-# TODO update to time based rather than sleep based
-# - still have it only loop every second but change update rates to last set time 
-# - with time base we can make animations asynchronous 
 try: 
 	while True:
 		cur_time = time.time()

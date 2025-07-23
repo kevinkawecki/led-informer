@@ -13,14 +13,16 @@ CLOCK = 0
 CLOCK_CALENDAR_T = 1
 CALENDAR = 2
 CALENDAR_WEATHER_T = 3
-CURRENT_WEATHER = 4
-WEATHER_CLOCK_T = 5
-STATE_MAX = 6
+CURRENT_TEMP = 4
+TEMP_RAIN_T = 5
+CURRENT_RAIN = 6
+STATE_MAX = 7
 DAILY_WEATHER = 5
 
-TIME_CLOCK = 20
-TIME_CALENDAR = 10
-TIME_CURRENT_WEATHER = 10
+TIME_CLOCK =  15
+TIME_CALENDAR = 3
+TIME_TEMP = 10
+TIME_RAIN = 5
 
 RED = graphics.Color(255, 0, 0)
 PURP = graphics.Color(100, 0, 255)
@@ -80,10 +82,10 @@ class DisplayDriver:
 
 			cur_time = time.time()
 
-			# loop through display states and change state based on current state
+			# loop through display states
 			if self.STATE == CLOCK:
 				self.displayClock(0)
-				self.displayTrainTimes(0)
+				self.displayTrainTimes(True, 0)
 				if cur_time - self.stateTime >= TIME_CLOCK:
 					self.incrementState()
 			elif self.STATE == CLOCK_CALENDAR_T:
@@ -91,38 +93,53 @@ class DisplayDriver:
 					self.canvas.Clear()
 					self.displayClock(-i)
 					self.displayCal(32-i)
-					self.displayTrainTimes(0)
-					print(i)
+					self.displayTrainTimes(True, 0)
 					time.sleep(.1)
 					self.canvas = self.matrix.SwapOnVSync(self.canvas)
 				self.incrementState()
 			elif self.STATE == CALENDAR:
 				self.displayCal(0)
-				self.displayTrainTimes(0)
+				self.displayTrainTimes(True, 0)
 				if cur_time - self.stateTime >= TIME_CALENDAR:
 					self.incrementState()
 			elif self.STATE == CALENDAR_WEATHER_T:
 				for i in range(34):
 					self.canvas.Clear()
 					self.displayCal(-i)
-					self.displayTrainTimes(-i)
-					self.displayCurrentWeather(32-i)
-					time.sleep(.1)
-					self.canvas = self.matrix.SwapOnVSync(self.canvas)
-				self.incrementState()
-			elif self.STATE == CURRENT_WEATHER:
-				self.displayCurrentWeather(0)
-				if cur_time - self.stateTime >= TIME_CURRENT_WEATHER:
-					self.incrementState()
-			elif self.STATE == WEATHER_CLOCK_T:
-				for i in range(34):
-					self.canvas.Clear()
-					self.displayCurrentWeather(-i)
 					self.displayClock(32-i)
-					self.displayTrainTimes(32-i)
+					if i >= 8:
+						self.displayTrainTimes(True, -8)
+						self.displayCurrentTemp(0)
+					else:
+						self.displayTrainTimes(True, -i)
+						self.displayCurrentTemp(8-i)
+						
 					time.sleep(.1)
 					self.canvas = self.matrix.SwapOnVSync(self.canvas)
 				self.incrementState()
+			elif self.STATE == CURRENT_TEMP:
+				self.displayClock(0)
+				self.displayTrainTimes(True, -8)
+				self.displayCurrentTemp(0)
+				if cur_time - self.stateTime >= TIME_TEMP:
+					self.incrementState()
+			elif self.STATE == TEMP_RAIN_T:
+				for i in range(10):
+					self.canvas.Clear()
+					self.displayCurrentTemp(i)
+					self.displayCurrentRain(-8+i)
+					self.displayClock(0)
+					self.displayTrainTimes(False, -8+i)
+					time.sleep(.1)
+					self.canvas = self.matrix.SwapOnVSync(self.canvas)
+				self.incrementState()
+			elif self.STATE == CURRENT_RAIN:
+				self.displayCurrentRain(0)
+				self.displayClock(0)
+				self.displayTrainTimes(False, 0)
+				if cur_time - self.stateTime >= TIME_RAIN:
+					self.incrementState()
+				
 			else:
 				self.STATE = CLOCK
 				print("ERR found default!")
@@ -142,20 +159,20 @@ class DisplayDriver:
 			self.STATE = 0
 
 
-	def displayCurrentWeather(self, y_offset):
-		graphics.DrawText(self.canvas, self.bigfont, 12, 8 + y_offset, 
-						  PURP, "Current")
-		graphics.DrawText(self.canvas, self.bigfont, 6, 16 + y_offset, 
+	def displayCurrentTemp(self, y_offset):
+		graphics.DrawText(self.canvas, self.bigfont, 22, 30 + y_offset, 
 						  CLK1, "Temp") 
-		graphics.DrawText(self.canvas, self.timefont, 6, 28 + y_offset, 
-						  CLK1, f"{self.curTemp:.0f}") 
-		# TODO make degree symbol
+		graphics.DrawText(self.canvas, self.bigfont, 45, 30 + y_offset, 
+						  CLK1, f"{self.curTemp:.0f}")
+		# TODO make a degree symbol 
+
+	def displayCurrentRain(self, y_offset):
 		if self.dailyData["precipitation_probability_max"][0]:
 			rain_prob = self.dailyData["precipitation_probability_max"][0]
-			graphics.DrawText(self.canvas, self.bigfont, 30, 16 + y_offset, 
+			graphics.DrawText(self.canvas, self.bigfont, 24, 8 + y_offset, 
 							CLK2, "Rain") 
-			graphics.DrawText(self.canvas, self.timefont, 30, 28 + y_offset, 
-							CLK2, f"{rain_prob:.0f}%") 
+			graphics.DrawText(self.canvas, self.bigfont, 44, 8 + y_offset, 
+							CLK2, f"{rain_prob:.0f}%")
 
 	def theLisDown(self, y_offset):
 		graphics.DrawText(self.canvas, self.bigfont, 30, 12 + y_offset, 
@@ -184,16 +201,6 @@ class DisplayDriver:
 						  self.mcolor, minutes)
 
 	def tick(self):
-		if self.hcolor == CLK1:
-			self.hcolor = CLK2
-		else:
-			self.hcolor = CLK1 
-
-		if self.mcolor == CLK1:
-			self.mcolor = CLK2
-		else:
-			self.mcolor = CLK1
-
 		self.hcolor = CLK1
 		self.mcolor = CLK1
 
@@ -208,13 +215,14 @@ class DisplayDriver:
 	def setSTimes(self, S_times):
 		self.S_times = S_times
 
-	def displayTrainTimes(self, y_offset):
+	def displayTrainTimes(self, showLabel, y_offset):
 		if len(self.N_times) == 0 and len(self.S_times) == 0: 
 			self.theLisDown(y_offset)
 			return
 
 		# generate northbound col
-		graphics.DrawText(self.canvas, self.bigfont, 24, 8 + y_offset, BLUE, "Man")
+		if showLabel: 
+			graphics.DrawText(self.canvas, self.bigfont, 24, 8 + y_offset, BLUE, "Man")
 		if len(self.N_times) == 0:
 			graphics.DrawText(self.canvas, self.smallfont, 24, 16 + y_offset, 
 							  BLUE, "DOWN!")
@@ -222,7 +230,8 @@ class DisplayDriver:
 			self.printTimeCol(self.N_times, 1, y_offset)
 
 		# generate southbound col
-		graphics.DrawText(self.canvas, self.bigfont, 45, 8 + y_offset, YELLOW, "Bkn")
+		if showLabel: 
+			graphics.DrawText(self.canvas, self.bigfont, 45, 8 + y_offset, YELLOW, "Bkn")
 		if len(self.S_times) == 0:
 			graphics.DrawText(self.canvas, self.smallfont, 45, 16 + y_offset, 
 							  YELLOW, "DOWN!")
@@ -280,23 +289,3 @@ class DisplayDriver:
 		except Exception as e:
 			print("Display has failed!")
 			print(e)
-
-
-	def genStringFromTimes_old(self, times):
-		nstring = ''
-		firstTime = True
-		for t in times: 
-			nextmin, nextsec = from_minutes(t)
-			if firstTime: 
-				firstTime = False
-				if nextmin == 0: 
-					nstring += f".{nextsec:02d}"
-				elif nextmin <= 5:
-					nstring += f"{nextmin}.{nextsec:02d}"
-				else: 
-					nstring += f"{nextmin}"
-			else: 
-				nstring += f",{nextmin}"
-		return nstring
-
-
