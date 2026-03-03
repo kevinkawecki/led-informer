@@ -3,6 +3,7 @@
 import datetime
 import time
 import requests
+import asyncio
 from google.transit import gtfs_realtime_pb2
 
 LTRAIN_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-l"
@@ -18,7 +19,7 @@ class LTrain:
 	def getLastTime(self):
 		return self.lastTime
 	
-	def getNextTimes(self):
+	async def getNextTimes(self):
 		feed = gtfs_realtime_pb2.FeedMessage()
 		response = requests.get(LTRAIN_URL)
 		if response.status_code != 200:

@@ -2,6 +2,7 @@
 
 import sys
 import time
+import asyncio
 
 from mta import LTrain
 from display import DisplayDriver
@@ -9,38 +10,53 @@ from weather import Weather
 
 # globals for when to reach out to servers and get updates
 MTA_UPDATE_SEC = 10
-WEATHER_UPDATE_SEC = 900 # 15 min  
+WEATHER_UPDATE_SEC = 6 #00 # 10 min  
 
+# init global objects 
 display = DisplayDriver()
-
-# Init objects and get first values
-# Morgan ave stop id = L14N or L14S
-morganStop = LTrain("L14")
-N_times, S_times = morganStop.getNextTimes()
-display.setNTimes(N_times)
-display.setSTimes(S_times)
-
+morganStop = LTrain("L14") # Morgan ave stop id = L14N or L14S
 weather = Weather()
-cur_temp, daily_info = weather.getUpdate()
-display.setCurTemp(cur_temp)
-display.setDailyData(daily_info)
 
-try: 
-	while True:
-		cur_time = time.time()
-		if cur_time - morganStop.getLastTime() >= MTA_UPDATE_SEC:
-			N_times, S_times = morganStop.getNextTimes()
-			display.setNTimes(N_times)
-			display.setSTimes(S_times)
+# helper functions for piping values into global display obj 
+async def updateTrainTimes():
+    N_times, S_times = await morganStop.getNextTimes()
+    display.setNTimes(N_times)
+    display.setSTimes(S_times)
 
-		if cur_time - weather.getLastTime() >= WEATHER_UPDATE_SEC:
-			cur_temp, daily_info = weather.getUpdate()
-			display.setCurTemp(cur_temp)
-			display.setDailyData(daily_info)
+async def updateWeatherInfo():
+    cur_temp, daily_info = await weather.getUpdate()
+    display.setCurTemp(cur_temp)
+    display.setDailyData(daily_info)
 
-		display.loop()
 
-		time.sleep(1)
+async def main(): 
 
-except KeyboardInterrupt:
-	sys.exit(0)
+    # run for first time values
+    await updateTrainTimes()
+    await updateWeatherInfo()
+
+    try: 
+        while True:
+            cur_time = time.time()
+
+            if cur_time - morganStop.getLastTime() >= MTA_UPDATE_SEC:
+                asyncio.create_task(updateTrainTimes())
+                await asyncio.sleep(0)
+
+            if cur_time - weather.getLastTime() >= WEATHER_UPDATE_SEC:
+                asyncio.create_task(updateWeatherInfo())
+                await asyncio.sleep(0)
+
+            # TODO async the display loop, this seems to be hanging worse than
+            # the network updates
+            # ++ that'll have the bonus of not hanging when running
+            # animations!!
+            display.loop()
+
+            await asyncio.sleep(1)
+
+    except KeyboardInterrupt:
+        sys.exit(0)
+
+if __name__ == "__main__":
+    asyncio.run(main())

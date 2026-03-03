@@ -37,7 +37,7 @@ class Weather:
 	def getLastTime(self):
 		return self.lastTime
 
-	def getNextWeather(self):
+	async def getNextWeather(self):
 		responses = self.openmeteo.weather_api(self.url, params=self.params)
 		self.lastTime = time.time()
 
@@ -103,12 +103,14 @@ class Weather:
 		daily_dataframe = pd.DataFrame(data = daily_data)
 		print(daily_dataframe)
 
+		return current_temperature, daily_data
+
 	def getDaily(self):
 		return self.daily_info
 
 	def getCurTemp(self):
 		return self.cur_temp
 
-	def getUpdate(self):
-		self.getNextWeather()
-		return self.cur_temp, self.daily_info
+	async def getUpdate(self):
+		return await self.getNextWeather()
+		#return self.cur_temp, self.daily_info

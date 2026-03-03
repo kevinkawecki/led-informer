@@ -176,7 +176,7 @@ class DisplayDriver:
 		# TODO make a degree symbol 
 
 	def displayCurrentRain(self, y_offset):
-		if self.dailyData["precipitation_probability_max"][0]:
+		if self.dailyData["precipitation_probability_max"][0] or self.dailyData["precipitation_probability_max"][0] == 0:
 			rain_prob = self.dailyData["precipitation_probability_max"][0]
 			# make everything this low full white
 			if rain_prob <= 5:
