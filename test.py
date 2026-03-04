@@ -1,5 +1,7 @@
 # test.py 
 
+import sys
+
 from mta import LTrain
 from helper import from_minutes, get_hour, get_minutes, get_month_day_dow
 from weather import Weather
@@ -8,6 +10,10 @@ UPDATE_SEC = 10
 
 # Morgan ave stop id = L14N or L14S
 morganStop = LTrain("L14")
+
+#l_alerts, l_delays = morganStop.getAlerts()
+#print(l_alerts)
+#print(l_delays)
 
 N_times, S_times = morganStop.getNextTimes()
 

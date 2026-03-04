@@ -10,7 +10,8 @@ from weather import Weather
 
 # globals for when to reach out to servers and get updates
 MTA_UPDATE_SEC = 10
-WEATHER_UPDATE_SEC = 6 #00 # 10 min  
+ALERT_UPDATE_SEC = 90
+WEATHER_UPDATE_SEC = 600 # 10 min  
 
 # init global objects 
 display = DisplayDriver()
@@ -28,12 +29,19 @@ async def updateWeatherInfo():
     display.setCurTemp(cur_temp)
     display.setDailyData(daily_info)
 
+async def updateAlerts():
+    l_alerts, l_delays = await morganStop.getAlerts()
+    # TODO
+    # display.setLAlerts(l_alerts)
+    # display.setLDelays(l_delays)
+
 
 async def main(): 
 
     # run for first time values
     await updateTrainTimes()
     await updateWeatherInfo()
+    await updateAlerts()
 
     try: 
         while True:
@@ -45,6 +53,10 @@ async def main():
 
             if cur_time - weather.getLastTime() >= WEATHER_UPDATE_SEC:
                 asyncio.create_task(updateWeatherInfo())
+                await asyncio.sleep(0)
+
+            if cur_time - morganStop.getLastAlertTime() >= ALERT_UPDATE_SEC:
+                asyncio.create_task(updateAlerts())
                 await asyncio.sleep(0)
 
             # TODO async the display loop, this seems to be hanging worse than
@@ -60,3 +72,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
