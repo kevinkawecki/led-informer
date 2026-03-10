@@ -151,13 +151,13 @@ class LTrain:
                             if "delays" in header_text.lower():
                                 l_delays.append({
                                     "header": header_text,
-                                    "description": description_text,
+                                    #"description": description_text,
                                     "periods": active_periods
                                 })
                             else:
                                 l_alerts.append({
                                     "header": header_text,
-                                    "description": description_text,
+                                    #"description": description_text,
                                     "periods": active_periods
                                 })
                         break

@@ -1,6 +1,7 @@
 # test.py 
 
 import sys
+import asyncio
 
 from mta import LTrain
 from helper import from_minutes, get_hour, get_minutes, get_month_day_dow
@@ -15,7 +16,14 @@ morganStop = LTrain("L14")
 #print(l_alerts)
 #print(l_delays)
 
-N_times, S_times = morganStop.getNextTimes()
+async def main(): 
+	#N_times, S_times = morganStop.getNextTimes()
+	l_alerts, l_delays = await morganStop.getAlerts()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+sys.exit(0)
 
 if len(N_times) > 0:
 	min, sec = from_minutes(N_times[0])

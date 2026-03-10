@@ -10,7 +10,7 @@ from weather import Weather
 
 # globals for when to reach out to servers and get updates
 MTA_UPDATE_SEC = 10
-ALERT_UPDATE_SEC = 90
+ALERT_UPDATE_SEC = 600
 WEATHER_UPDATE_SEC = 600 # 10 min  
 
 # init global objects 
@@ -32,9 +32,31 @@ async def updateWeatherInfo():
 async def updateAlerts():
     l_alerts, l_delays = await morganStop.getAlerts()
     # TODO
-    # display.setLAlerts(l_alerts)
-    # display.setLDelays(l_delays)
+    display.setAlerts(l_alerts)
+    display.setDelays(l_delays)
 
+from curtsies import Input
+
+async def handle_input(x_offset, y_offset):
+    """Asynchronously processes keyboard input."""
+    # Input(keynames='curtsies') makes arrow keys return '<UP>', '<DOWN>', etc.
+    with Input(keynames='curtsies') as input_generator:
+        for key in input_generator:
+            if key == '<UP>':
+                y_offset -= 1
+                return x_offset, y_offset
+            elif key == '<DOWN>':
+                y_offset += 1
+                return x_offset, y_offset
+            elif key == '<RIGHT>':
+                x_offset += 1
+                return x_offset, y_offset
+            elif key == '<LEFT>':
+                x_offset -= 1
+                return x_offset, y_offset
+
+            # Yield control back to the event loop
+            await asyncio.sleep(0)
 
 async def main(): 
 
@@ -42,6 +64,9 @@ async def main():
     await updateTrainTimes()
     await updateWeatherInfo()
     await updateAlerts()
+
+    x_offset = 0
+    y_offset = 0
 
     try: 
         while True:
@@ -63,9 +88,12 @@ async def main():
             # the network updates
             # ++ that'll have the bonus of not hanging when running
             # animations!!
-            display.loop()
+            asyncio.create_task(display.loop(x_offset, y_offset))
+            #output = await asyncio.gather(display.loop(x_offset, y_offset), handle_input(x_offset, y_offset))
+            #x_offset, y_offset = output[1]
+            #print(f"{x_offset}, {y_offset}")
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(.08)
 
     except KeyboardInterrupt:
         sys.exit(0)
